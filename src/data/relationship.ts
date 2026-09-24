@@ -2,7 +2,7 @@
  * PERSONALIZA ESTE ARCHIVO. Toda la historia visible del sitio vive aquí.
  * Coloca fotos y videos en /public/images y usa rutas como /images/mi-foto.jpg.
  */
-export const RELATIONSHIP_START_DATE = 'AAAA-MM-DD';
+export const RELATIONSHIP_START_DATE = '2021-09-25';
 
 export type Memory = {
   id: string;

@@ -6,6 +6,7 @@ import { StarField } from './StarField';
 import { TimeTogether } from './TimeTogether';
 import { MemoryModal } from './MemoryModal';
 import { ConstellationMap } from './ConstellationMap';
+import { MotionEffects } from './MotionEffects';
 
 const STORAGE_KEY = 'nuestro-universo-progress-v1';
 
@@ -54,16 +55,16 @@ function MusicToggle() {
   return <button type="button" className="music-toggle" onClick={toggle} aria-pressed={playing}><span aria-hidden="true">{playing ? 'Ⅱ' : '♪'}</span>{playing ? 'Silenciar atmósfera' : 'Activar atmósfera'}</button>;
 }
 
-function Welcome({ onEnter }: { onEnter: () => void }) {
+function Welcome({ onEnter, entering }: { onEnter: () => void; entering: boolean }) {
   return (
-    <section className="welcome-screen" aria-labelledby="welcome-title">
+    <section className={`welcome-screen ${entering ? 'is-entering' : ''}`} aria-labelledby="welcome-title">
       <div className="aurora aurora-one" aria-hidden="true" /><div className="aurora aurora-two" aria-hidden="true" />
       <div className="welcome-content">
         <p className="eyebrow">Para {relationship.girlfriendName}</p>
         <span className="orbital-mark" aria-hidden="true"><i /></span>
         <h1 id="welcome-title">Nuestro <em>Universo</em></h1>
         <p className="welcome-copy">Hay historias que se cuentan.<br />La nuestra se explora.</p>
-        <button className="enter-button" type="button" onClick={onEnter}><span>Entrar a nuestro universo</span><span aria-hidden="true">↗</span></button>
+        <button className="enter-button" type="button" onClick={onEnter} disabled={entering}><span>{entering ? 'Iniciando el viaje…' : 'Entrar a nuestro universo'}</span><span aria-hidden="true">↗</span></button>
       </div>
       <p className="anniversary-note">Cinco años · Una historia infinita</p>
     </section>
@@ -150,6 +151,8 @@ function Celebration({ kind, onClose }: { kind: 'always' | 'obviously'; onClose:
 
 export default function UniverseExperience() {
   const [entered, setEntered] = useState(false);
+  const [entering, setEntering] = useState(false);
+  const [traveling, setTraveling] = useState(false);
   const [view, setView] = useState<'map' | 'future' | string>('map');
   const [visited, setVisited] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set();
@@ -160,22 +163,36 @@ export default function UniverseExperience() {
   const [celebration, setCelebration] = useState<'always' | 'obviously' | null>(null);
   const constellation = useMemo(() => relationship.constellations.find((item) => item.id === view), [view]);
 
+  const travelTo = (target: string, scrollToMap = false) => {
+    setTraveling(true);
+    window.setTimeout(() => {
+      setView(target);
+      window.scrollTo({ top: 0 });
+      if (scrollToMap) window.setTimeout(() => document.getElementById('map')?.scrollIntoView({ behavior: 'smooth' }), 80);
+    }, 430);
+    window.setTimeout(() => setTraveling(false), 1080);
+  };
   const openConstellation = (id: string) => {
     const next = new Set(visited).add(id);
     setVisited(next);
     localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
-    setView(id);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    travelTo(id);
   };
-  const goMap = () => { setView('map'); window.setTimeout(() => document.getElementById('map')?.scrollIntoView({ behavior: 'smooth' }), 20); };
+  const goMap = () => travelTo('map', true);
+  const enterUniverse = () => {
+    setEntering(true);
+    window.setTimeout(() => { setEntered(true); setEntering(false); }, 1050);
+  };
 
   return (
     <main className={`universe ${entered ? 'has-entered' : ''}`}>
       <StarField />
-      {!entered ? <Welcome onEnter={() => setEntered(true)} /> : (
+      <MotionEffects scene={`${entered}-${view}`} />
+      <div className={`travel-overlay ${traveling ? 'is-active' : ''}`} aria-hidden="true"><i /><i /><span>✦</span></div>
+      {!entered ? <Welcome onEnter={enterUniverse} entering={entering} /> : (
         <>
           <nav className="site-nav" aria-label="Navegación principal"><button className="brand" type="button" onClick={goMap}><span>✦</span>Nuestro Universo</button><div className="nav-actions"><div className="progress-wrap"><span>{visited.size}/5 exploradas</span><i><b style={{ width: `${visited.size * 20}%` }} /></i></div><MusicToggle /></div></nav>
-          {view === 'map' && <div className="journey"><Intro /><div id="map"><ConstellationMap constellations={relationship.constellations} visited={visited} onSelect={openConstellation} onSecret={() => setSecretOpen(true)} onFuture={() => setView('future')} /></div><footer className="site-footer"><span>✦</span><p>Hecho para {relationship.girlfriendName}<br />por {relationship.myName}</p></footer></div>}
+          {view === 'map' && <div className="journey"><Intro /><div id="map"><ConstellationMap constellations={relationship.constellations} visited={visited} onSelect={openConstellation} onSecret={() => setSecretOpen(true)} onFuture={() => travelTo('future')} /></div><footer className="site-footer"><span>✦</span><p>Hecho para {relationship.girlfriendName}<br />por {relationship.myName}</p></footer></div>}
           {constellation && <ConstellationStory constellation={constellation} onBack={goMap} onMemory={setMemory} />}
           {view === 'future' && <Future onBack={goMap} onCelebrate={setCelebration} />}
         </>
