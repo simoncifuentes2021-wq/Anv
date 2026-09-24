@@ -32,8 +32,9 @@ export function ConstellationMap({ constellations, visited, onSelect, onSecret, 
             aria-label={`Explorar ${constellation.name}, ${constellation.year}`}
           >
             <span className="node-number">{constellation.number}</span>
-            <span className="node-sky" aria-hidden="true"><i /><i /><i /><i /><i /></span>
+            <span className="node-sky" aria-hidden="true"><i /><i /><i /><i /><i /><b className="orbiting-spark" /></span>
             <span className="node-copy"><small>{constellation.year}</small><strong>{constellation.name}</strong><em>{visited.has(constellation.id) ? 'Explorada' : 'Por descubrir'} <b>↗</b></em></span>
+            <span className="node-signal" aria-hidden="true"><i /></span>
           </button>
         ))}
 
