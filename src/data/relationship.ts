@@ -35,9 +35,9 @@ export const relationship = {
   mainPhrase: 'Hace cinco años comenzó nuestro universo.',
   favoriteSong: '[NOMBRE DE NUESTRA CANCIÓN]',
   spotifyUrl: '',
-  finalDate: '[FECHA DE LA SORPRESA]',
-  finalPlace: '[LUGAR DE LA SORPRESA]',
-  finalInvitation: 'Quiero que sigamos cumpliendo cada sueño, cada plan y cada promesa juntos, siempre de la mano y con la ayuda de Dios.',
+  finalDate: 'Desde hoy y para siempre',
+  finalPlace: 'Donde sea, pero juntitos',
+  finalInvitation: 'Mi plan favorito siempre será cualquier lugar en el que estés tú. Quiero seguir cumpliendo sueños, promesas y nuevas aventuras contigo, siempre de la mano de Dios.',
   introText: 'Desde aquel día, cada momento contigo se convirtió en parte de mi lugar favorito.',
   secretLetter: `Mi querida Monserrat Antonia:
 
