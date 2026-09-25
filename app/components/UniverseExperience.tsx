@@ -101,7 +101,7 @@ function ConstellationStory({ constellation, onBack, onMemory }: { constellation
               <img src={memory.image} alt="" loading="lazy" />
               <i>✦</i>
             </span>
-            <span className="memory-card-copy"><small>{memory.date} · {memory.place}</small><strong>{memory.title}</strong><em>Leer este recuerdo <b>↗</b></em></span>
+            <span className="memory-card-copy"><small>{memory.place}</small><strong>{memory.title}</strong><em>Leer este recuerdo <b>↗</b></em></span>
           </button>
         ))}
       </div>

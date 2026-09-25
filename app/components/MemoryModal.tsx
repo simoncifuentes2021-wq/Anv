@@ -26,7 +26,7 @@ export function MemoryModal({ memory, onClose }: { memory: Memory; onClose: () =
           <span className="memory-index">RECUERDO</span>
         </div>
         <div className="memory-body">
-          <p className="memory-meta">{memory.date}<span />{memory.place}</p>
+          <p className="memory-meta">{memory.place}</p>
           <h2 id="memory-title">{memory.title}</h2>
           <p>{memory.description}</p>
           <blockquote>“{memory.quote}”</blockquote>
