@@ -96,7 +96,11 @@ function ConstellationStory({ constellation, onBack, onMemory }: { constellation
         {constellation.memories.map((memory, index) => (
           <button className="memory-card" type="button" key={memory.id} onClick={() => onMemory(memory)}>
             <span className="memory-card-number">0{index + 1}</span>
-            <span className="memory-card-art" aria-hidden="true"><i>✦</i></span>
+            <span className="memory-card-art" aria-hidden="true">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={memory.image} alt="" loading="lazy" />
+              <i>✦</i>
+            </span>
             <span className="memory-card-copy"><small>{memory.date} · {memory.place}</small><strong>{memory.title}</strong><em>Leer este recuerdo <b>↗</b></em></span>
           </button>
         ))}

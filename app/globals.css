@@ -142,7 +142,10 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--gold); outline-
 .memory-card-number { color: rgba(245,238,227,.27); font-family: Georgia,"Times New Roman",serif; font-size: .7rem; }
 .memory-card-art { flex: 1; display: grid; place-items: center; margin: 18px 0 25px; background: radial-gradient(circle at 50% 45%,color-mix(in srgb,var(--story-accent) 13%,transparent),transparent 45%),linear-gradient(145deg,rgba(255,255,255,.025),transparent); border: 1px solid rgba(245,238,227,.06); overflow: hidden; }
 .memory-card-art::before { content: ""; width: 115px; height: 115px; border: 1px solid color-mix(in srgb,var(--story-accent) 23%,transparent); border-radius: 50%; box-shadow: 0 0 50px color-mix(in srgb,var(--story-accent) 8%,transparent); }
-.memory-card-art i { position: absolute; color: var(--story-accent); font-style: normal; }
+.memory-card-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: saturate(.82) contrast(1.04) brightness(.76); transition: transform .9s cubic-bezier(.2,.7,.2,1),filter .6s; }
+.memory-card-art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg,rgba(7,7,16,.04),rgba(7,7,16,.12) 55%,rgba(7,7,16,.6)); pointer-events: none; }
+.memory-card:hover .memory-card-art img { transform: scale(1.07); filter: saturate(.96) contrast(1.02) brightness(.88); }
+.memory-card-art i { position: absolute; z-index: 2; right: 14px; top: 13px; color: var(--story-accent); font-style: normal; filter: drop-shadow(0 0 7px rgba(0,0,0,.6)); }
 .memory-card-copy { display: grid; gap: 9px; }
 .memory-card-copy small { color: rgba(245,238,227,.42); font-size: .56rem; letter-spacing: .12em; text-transform: uppercase; }
 .memory-card-copy strong { font-family: Georgia,"Times New Roman",serif; font-size: 1.2rem; font-weight: 400; line-height: 1.25; }

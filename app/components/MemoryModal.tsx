@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import type { Memory } from '../../src/data/relationship';
 
 export function MemoryModal({ memory, onClose }: { memory: Memory; onClose: () => void }) {
-  const [imageFailed, setImageFailed] = useState(/recuerdo-\d+\./.test(memory.image));
+  const [imageFailed, setImageFailed] = useState(false);
   useEffect(() => {
     const close = (event: KeyboardEvent) => event.key === 'Escape' && onClose();
     document.addEventListener('keydown', close);
