@@ -18,22 +18,102 @@ function mainPhrase() {
   return `Hace ${new Intl.NumberFormat('es-CL').format(days)} días comenzó nuestro universo.`;
 }
 
+type RomanticAudio = { context: AudioContext; master: GainNode; loopTimer: number };
+
+const SCORE_LENGTH = 32;
+const CHORDS = [
+  [130.81, 164.81, 196, 246.94],
+  [110, 130.81, 164.81, 196],
+  [87.31, 130.81, 164.81, 220],
+  [98, 146.83, 196, 220],
+];
+const MELODY = [
+  [1.1, 523.25], [3.2, 659.25], [5.4, 783.99], [7, 659.25],
+  [9.3, 493.88], [11.5, 659.25], [13.7, 880], [15.2, 783.99],
+  [17.4, 523.25], [19.6, 698.46], [21.8, 659.25], [23.5, 523.25],
+  [25.4, 587.33], [27.2, 783.99], [29.1, 659.25], [30.6, 523.25],
+];
+
+function createReverb(context: AudioContext) {
+  const duration = 3.2;
+  const impulse = context.createBuffer(2, context.sampleRate * duration, context.sampleRate);
+  for (let channel = 0; channel < impulse.numberOfChannels; channel += 1) {
+    const data = impulse.getChannelData(channel);
+    for (let index = 0; index < data.length; index += 1) {
+      const fade = Math.pow(1 - index / data.length, 2.8);
+      data[index] = (Math.random() * 2 - 1) * fade;
+    }
+  }
+  const reverb = context.createConvolver();
+  reverb.buffer = impulse;
+  return reverb;
+}
+
+function scheduleScore(context: AudioContext, destination: AudioNode, startsAt: number) {
+  CHORDS.forEach((chord, chordIndex) => {
+    const chordStart = startsAt + chordIndex * 8;
+    chord.forEach((frequency, noteIndex) => {
+      [-5, 5].forEach((detune, voiceIndex) => {
+        const oscillator = context.createOscillator();
+        const envelope = context.createGain();
+        oscillator.type = voiceIndex === 0 ? 'sine' : 'triangle';
+        oscillator.frequency.setValueAtTime(frequency, chordStart);
+        oscillator.detune.setValueAtTime(detune, chordStart);
+        envelope.gain.setValueAtTime(.0001, chordStart);
+        envelope.gain.exponentialRampToValueAtTime(noteIndex === 0 ? .026 : .017, chordStart + 2.2);
+        envelope.gain.setValueAtTime(noteIndex === 0 ? .026 : .017, chordStart + 5.4);
+        envelope.gain.exponentialRampToValueAtTime(.0001, chordStart + 7.9);
+        oscillator.connect(envelope).connect(destination);
+        oscillator.start(chordStart);
+        oscillator.stop(chordStart + 8);
+      });
+    });
+  });
+
+  MELODY.forEach(([offset, frequency], index) => {
+    const noteStart = startsAt + offset;
+    const noteDuration = index % 4 === 2 ? 2.8 : 2.1;
+    const bell = context.createOscillator();
+    const glow = context.createOscillator();
+    const bellEnvelope = context.createGain();
+    const glowEnvelope = context.createGain();
+    bell.type = 'sine';
+    glow.type = 'triangle';
+    bell.frequency.setValueAtTime(frequency, noteStart);
+    glow.frequency.setValueAtTime(frequency * 2, noteStart);
+    bellEnvelope.gain.setValueAtTime(.0001, noteStart);
+    bellEnvelope.gain.exponentialRampToValueAtTime(.075, noteStart + .025);
+    bellEnvelope.gain.exponentialRampToValueAtTime(.0001, noteStart + noteDuration);
+    glowEnvelope.gain.setValueAtTime(.0001, noteStart);
+    glowEnvelope.gain.exponentialRampToValueAtTime(.014, noteStart + .018);
+    glowEnvelope.gain.exponentialRampToValueAtTime(.0001, noteStart + 1.2);
+    bell.connect(bellEnvelope).connect(destination);
+    glow.connect(glowEnvelope).connect(destination);
+    bell.start(noteStart);
+    glow.start(noteStart);
+    bell.stop(noteStart + noteDuration + .05);
+    glow.stop(noteStart + 1.25);
+  });
+}
+
 function MusicToggle() {
   const [playing, setPlaying] = useState(false);
-  const audioRef = useRef<{ context: AudioContext; gain: GainNode; oscillators: OscillatorNode[]; lfo: OscillatorNode } | null>(null);
+  const audioRef = useRef<RomanticAudio | null>(null);
 
   const toggle = async () => {
     if (audioRef.current) {
       const activeAudio = audioRef.current;
       const now = activeAudio.context.currentTime;
-      activeAudio.gain.gain.cancelScheduledValues(now);
-      activeAudio.gain.gain.setValueAtTime(Math.max(activeAudio.gain.gain.value, .0001), now);
-      activeAudio.gain.gain.exponentialRampToValueAtTime(.0001, now + .75);
+      window.clearInterval(activeAudio.loopTimer);
+      activeAudio.master.gain.cancelScheduledValues(now);
+      activeAudio.master.gain.setValueAtTime(Math.max(activeAudio.master.gain.value, .0001), now);
+      activeAudio.master.gain.exponentialRampToValueAtTime(.0001, now + 1.1);
       audioRef.current = null;
       setPlaying(false);
-      window.setTimeout(() => { void activeAudio.context.close(); }, 850);
+      window.setTimeout(() => { void activeAudio.context.close(); }, 1250);
       return;
     }
+
     const AudioCtor = window.AudioContext || (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     if (!AudioCtor) return;
     const context = new AudioCtor();
@@ -41,50 +121,40 @@ function MusicToggle() {
       if (context.state === 'suspended') await context.resume();
 
       const now = context.currentTime;
-      const gain = context.createGain();
-      const filter = context.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(900, now);
-      filter.Q.setValueAtTime(.7, now);
-      gain.gain.setValueAtTime(.0001, now);
-      gain.gain.exponentialRampToValueAtTime(.12, now + 1.5);
-      gain.connect(filter).connect(context.destination);
+      const master = context.createGain();
+      const warmth = context.createBiquadFilter();
+      const compressor = context.createDynamicsCompressor();
+      const dry = context.createGain();
+      const wet = context.createGain();
+      const reverb = createReverb(context);
 
-      const noteVolumes = [.42, .2, .13, .09];
-      const oscillators = [130.81, 196, 261.63, 329.63].map((frequency, index) => {
-        const oscillator = context.createOscillator();
-        const noteGain = context.createGain();
-        oscillator.type = index === 0 ? 'triangle' : 'sine';
-        oscillator.frequency.setValueAtTime(frequency, now);
-        oscillator.detune.setValueAtTime(index % 2 === 0 ? -3 : 3, now);
-        noteGain.gain.setValueAtTime(noteVolumes[index], now);
-        oscillator.connect(noteGain).connect(gain);
-        oscillator.start(now);
-        return oscillator;
-      });
+      master.gain.setValueAtTime(.0001, now);
+      master.gain.exponentialRampToValueAtTime(.72, now + 2.4);
+      warmth.type = 'lowpass';
+      warmth.frequency.setValueAtTime(2900, now);
+      warmth.Q.setValueAtTime(.55, now);
+      dry.gain.setValueAtTime(.78, now);
+      wet.gain.setValueAtTime(.25, now);
+      compressor.threshold.setValueAtTime(-20, now);
+      compressor.knee.setValueAtTime(18, now);
+      compressor.ratio.setValueAtTime(4, now);
 
-      const lfo = context.createOscillator();
-      const lfoDepth = context.createGain();
-      lfo.frequency.setValueAtTime(.08, now);
-      lfoDepth.gain.setValueAtTime(150, now);
-      lfo.connect(lfoDepth).connect(filter.frequency);
-      lfo.start(now);
+      master.connect(warmth);
+      warmth.connect(dry).connect(compressor);
+      warmth.connect(reverb).connect(wet).connect(compressor);
+      compressor.connect(context.destination);
 
-      [523.25, 659.25, 783.99].forEach((frequency, index) => {
-        const chime = context.createOscillator();
-        const chimeGain = context.createGain();
-        const startsAt = now + index * .16;
-        chime.type = 'sine';
-        chime.frequency.setValueAtTime(frequency, startsAt);
-        chimeGain.gain.setValueAtTime(.0001, startsAt);
-        chimeGain.gain.exponentialRampToValueAtTime(.1, startsAt + .035);
-        chimeGain.gain.exponentialRampToValueAtTime(.0001, startsAt + 1.65);
-        chime.connect(chimeGain).connect(filter);
-        chime.start(startsAt);
-        chime.stop(startsAt + 1.7);
-      });
+      let nextLoopStart = now + .08;
+      const queueScore = () => {
+        while (nextLoopStart < context.currentTime + SCORE_LENGTH + 2) {
+          scheduleScore(context, master, nextLoopStart);
+          nextLoopStart += SCORE_LENGTH;
+        }
+      };
+      queueScore();
+      const loopTimer = window.setInterval(queueScore, 15000);
 
-      audioRef.current = { context, gain, oscillators, lfo };
+      audioRef.current = { context, master, loopTimer };
       setPlaying(true);
     } catch {
       void context.close();
@@ -92,8 +162,12 @@ function MusicToggle() {
     }
   };
 
-  useEffect(() => () => { void audioRef.current?.context.close(); }, []);
-  return <button type="button" className="music-toggle" onClick={toggle} aria-pressed={playing}><span aria-hidden="true">{playing ? 'Ⅱ' : '♪'}</span>{playing ? 'Silenciar atmósfera' : 'Activar atmósfera'}</button>;
+  useEffect(() => () => {
+    if (!audioRef.current) return;
+    window.clearInterval(audioRef.current.loopTimer);
+    void audioRef.current.context.close();
+  }, []);
+  return <button type="button" className="music-toggle" onClick={toggle} aria-pressed={playing}><span aria-hidden="true">{playing ? 'Ⅱ' : '♪'}</span>{playing ? 'Silenciar melodía' : 'Activar melodía'}</button>;
 }
 
 function Welcome({ onEnter, entering }: { onEnter: () => void; entering: boolean }) {
