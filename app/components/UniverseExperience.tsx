@@ -18,156 +18,111 @@ function mainPhrase() {
   return `Hace ${new Intl.NumberFormat('es-CL').format(days)} días comenzó nuestro universo.`;
 }
 
-type RomanticAudio = { context: AudioContext; master: GainNode; loopTimer: number };
-
-const SCORE_LENGTH = 32;
-const CHORDS = [
-  [130.81, 164.81, 196, 246.94],
-  [110, 130.81, 164.81, 196],
-  [87.31, 130.81, 164.81, 220],
-  [98, 146.83, 196, 220],
-];
-const MELODY = [
-  [1.1, 523.25], [3.2, 659.25], [5.4, 783.99], [7, 659.25],
-  [9.3, 493.88], [11.5, 659.25], [13.7, 880], [15.2, 783.99],
-  [17.4, 523.25], [19.6, 698.46], [21.8, 659.25], [23.5, 523.25],
-  [25.4, 587.33], [27.2, 783.99], [29.1, 659.25], [30.6, 523.25],
-];
-
-function createReverb(context: AudioContext) {
-  const duration = 3.2;
-  const impulse = context.createBuffer(2, context.sampleRate * duration, context.sampleRate);
-  for (let channel = 0; channel < impulse.numberOfChannels; channel += 1) {
-    const data = impulse.getChannelData(channel);
-    for (let index = 0; index < data.length; index += 1) {
-      const fade = Math.pow(1 - index / data.length, 2.8);
-      data[index] = (Math.random() * 2 - 1) * fade;
-    }
-  }
-  const reverb = context.createConvolver();
-  reverb.buffer = impulse;
-  return reverb;
-}
-
-function scheduleScore(context: AudioContext, destination: AudioNode, startsAt: number) {
-  CHORDS.forEach((chord, chordIndex) => {
-    const chordStart = startsAt + chordIndex * 8;
-    chord.forEach((frequency, noteIndex) => {
-      [-5, 5].forEach((detune, voiceIndex) => {
-        const oscillator = context.createOscillator();
-        const envelope = context.createGain();
-        oscillator.type = voiceIndex === 0 ? 'sine' : 'triangle';
-        oscillator.frequency.setValueAtTime(frequency, chordStart);
-        oscillator.detune.setValueAtTime(detune, chordStart);
-        envelope.gain.setValueAtTime(.0001, chordStart);
-        envelope.gain.exponentialRampToValueAtTime(noteIndex === 0 ? .026 : .017, chordStart + 2.2);
-        envelope.gain.setValueAtTime(noteIndex === 0 ? .026 : .017, chordStart + 5.4);
-        envelope.gain.exponentialRampToValueAtTime(.0001, chordStart + 7.9);
-        oscillator.connect(envelope).connect(destination);
-        oscillator.start(chordStart);
-        oscillator.stop(chordStart + 8);
-      });
-    });
-  });
-
-  MELODY.forEach(([offset, frequency], index) => {
-    const noteStart = startsAt + offset;
-    const noteDuration = index % 4 === 2 ? 2.8 : 2.1;
-    const bell = context.createOscillator();
-    const glow = context.createOscillator();
-    const bellEnvelope = context.createGain();
-    const glowEnvelope = context.createGain();
-    bell.type = 'sine';
-    glow.type = 'triangle';
-    bell.frequency.setValueAtTime(frequency, noteStart);
-    glow.frequency.setValueAtTime(frequency * 2, noteStart);
-    bellEnvelope.gain.setValueAtTime(.0001, noteStart);
-    bellEnvelope.gain.exponentialRampToValueAtTime(.075, noteStart + .025);
-    bellEnvelope.gain.exponentialRampToValueAtTime(.0001, noteStart + noteDuration);
-    glowEnvelope.gain.setValueAtTime(.0001, noteStart);
-    glowEnvelope.gain.exponentialRampToValueAtTime(.014, noteStart + .018);
-    glowEnvelope.gain.exponentialRampToValueAtTime(.0001, noteStart + 1.2);
-    bell.connect(bellEnvelope).connect(destination);
-    glow.connect(glowEnvelope).connect(destination);
-    bell.start(noteStart);
-    glow.start(noteStart);
-    bell.stop(noteStart + noteDuration + .05);
-    glow.stop(noteStart + 1.25);
-  });
-}
-
 function MusicToggle() {
   const [playing, setPlaying] = useState(false);
-  const audioRef = useRef<RomanticAudio | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const audio = new Audio('/musicafondo.mp3');
+    audio.loop = true;
+    audio.preload = 'auto';
+    audio.volume = .32;
+    audioRef.current = audio;
+
+    const handleFinalAudio = (event: Event) => {
+      const action = (event as CustomEvent<'play' | 'stop'>).detail;
+      if (!audio.paused) audio.volume = action === 'play' ? .07 : .32;
+    };
+    window.addEventListener('nuestro-universo:final-audio', handleFinalAudio);
+    return () => {
+      window.removeEventListener('nuestro-universo:final-audio', handleFinalAudio);
+      audio.pause();
+      audioRef.current = null;
+    };
+  }, []);
 
   const toggle = async () => {
-    if (audioRef.current) {
-      const activeAudio = audioRef.current;
-      const now = activeAudio.context.currentTime;
-      window.clearInterval(activeAudio.loopTimer);
-      activeAudio.master.gain.cancelScheduledValues(now);
-      activeAudio.master.gain.setValueAtTime(Math.max(activeAudio.master.gain.value, .0001), now);
-      activeAudio.master.gain.exponentialRampToValueAtTime(.0001, now + 1.1);
-      audioRef.current = null;
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (playing) {
+      audio.pause();
       setPlaying(false);
-      window.setTimeout(() => { void activeAudio.context.close(); }, 1250);
       return;
     }
-
-    const AudioCtor = window.AudioContext || (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    if (!AudioCtor) return;
-    const context = new AudioCtor();
     try {
-      if (context.state === 'suspended') await context.resume();
-
-      const now = context.currentTime;
-      const master = context.createGain();
-      const warmth = context.createBiquadFilter();
-      const compressor = context.createDynamicsCompressor();
-      const dry = context.createGain();
-      const wet = context.createGain();
-      const reverb = createReverb(context);
-
-      master.gain.setValueAtTime(.0001, now);
-      master.gain.exponentialRampToValueAtTime(.72, now + 2.4);
-      warmth.type = 'lowpass';
-      warmth.frequency.setValueAtTime(2900, now);
-      warmth.Q.setValueAtTime(.55, now);
-      dry.gain.setValueAtTime(.78, now);
-      wet.gain.setValueAtTime(.25, now);
-      compressor.threshold.setValueAtTime(-20, now);
-      compressor.knee.setValueAtTime(18, now);
-      compressor.ratio.setValueAtTime(4, now);
-
-      master.connect(warmth);
-      warmth.connect(dry).connect(compressor);
-      warmth.connect(reverb).connect(wet).connect(compressor);
-      compressor.connect(context.destination);
-
-      let nextLoopStart = now + .08;
-      const queueScore = () => {
-        while (nextLoopStart < context.currentTime + SCORE_LENGTH + 2) {
-          scheduleScore(context, master, nextLoopStart);
-          nextLoopStart += SCORE_LENGTH;
-        }
-      };
-      queueScore();
-      const loopTimer = window.setInterval(queueScore, 15000);
-
-      audioRef.current = { context, master, loopTimer };
+      if (audio.ended) audio.currentTime = 0;
+      await audio.play();
       setPlaying(true);
     } catch {
-      void context.close();
       setPlaying(false);
     }
   };
 
+  return <button type="button" className="music-toggle" onClick={toggle} aria-pressed={playing}><span aria-hidden="true">{playing ? 'Ⅱ' : '♪'}</span>{playing ? 'Pausar música' : 'Activar música'}</button>;
+}
+
+function FinalAudioMessage() {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  const announce = (action: 'play' | 'stop') => {
+    window.dispatchEvent(new CustomEvent('nuestro-universo:final-audio', { detail: action }));
+  };
+
+  const toggle = async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (playing) {
+      audio.pause();
+      setPlaying(false);
+      announce('stop');
+      return;
+    }
+    try {
+      if (audio.ended) audio.currentTime = 0;
+      await audio.play();
+      setPlaying(true);
+      announce('play');
+    } catch {
+      setPlaying(false);
+      announce('stop');
+    }
+  };
+
   useEffect(() => () => {
-    if (!audioRef.current) return;
-    window.clearInterval(audioRef.current.loopTimer);
-    void audioRef.current.context.close();
+    audioRef.current?.pause();
+    window.dispatchEvent(new CustomEvent('nuestro-universo:final-audio', { detail: 'stop' }));
   }, []);
-  return <button type="button" className="music-toggle" onClick={toggle} aria-pressed={playing}><span aria-hidden="true">{playing ? 'Ⅱ' : '♪'}</span>{playing ? 'Silenciar melodía' : 'Activar melodía'}</button>;
+
+  return (
+    <section className="final-audio" aria-labelledby="final-audio-title">
+      <span className="final-audio-star" aria-hidden="true">✦</span>
+      <p className="overline">Un último detalle</p>
+      <h3 id="final-audio-title">Antes de terminar…</h3>
+      <p>Hay algo cortito que quiero que escuches con el corazón.</p>
+      <button type="button" onClick={toggle} aria-pressed={playing}>
+        <span aria-hidden="true">{playing ? 'Ⅱ' : '▶'}</span>
+        {playing ? 'Pausar mi mensaje' : 'Escuchar mi mensaje'}
+      </button>
+      <div className="final-audio-progress" aria-hidden="true"><i style={{ width: `${progress}%` }} /></div>
+      <audio
+        ref={audioRef}
+        src="/audio.ogg"
+        preload="metadata"
+        onTimeUpdate={(event) => {
+          const audio = event.currentTarget;
+          setProgress(audio.duration ? (audio.currentTime / audio.duration) * 100 : 0);
+        }}
+        onEnded={(event) => {
+          event.currentTarget.currentTime = 0;
+          setProgress(0);
+          setPlaying(false);
+          announce('stop');
+        }}
+      />
+    </section>
+  );
 }
 
 function Welcome({ onEnter, entering }: { onEnter: () => void; entering: boolean }) {
@@ -255,6 +210,7 @@ function Future({ onBack, onCelebrate }: { onBack: () => void; onCelebrate: (kin
         <p className="invitation-plan">{relationship.finalInvitation}</p>
       </div>
       <div className="final-question"><p>¿Quieres seguir explorando el universo conmigo?</p><div><button type="button" onClick={() => onCelebrate('always')}>Sí, siempre</button><button type="button" onClick={() => onCelebrate('obviously')}>Obviamente</button></div></div>
+      <FinalAudioMessage />
     </section>
   );
 }
