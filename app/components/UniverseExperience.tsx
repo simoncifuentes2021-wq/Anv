@@ -21,6 +21,7 @@ function mainPhrase() {
 function MusicToggle() {
   const [playing, setPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const fadeRef = useRef<number | null>(null);
 
   useEffect(() => {
     const audio = new Audio('/musicafondo.mp3');
@@ -30,12 +31,29 @@ function MusicToggle() {
     audioRef.current = audio;
 
     const handleFinalAudio = (event: Event) => {
-      const action = (event as CustomEvent<'play' | 'stop'>).detail;
+      const action = (event as CustomEvent<'play' | 'stop' | 'finale'>).detail;
+      if (fadeRef.current !== null) window.clearInterval(fadeRef.current);
+      if (action === 'finale' && !audio.paused) {
+        const initialVolume = audio.volume;
+        const startedAt = performance.now();
+        fadeRef.current = window.setInterval(() => {
+          const progress = Math.min((performance.now() - startedAt) / 1100, 1);
+          audio.volume = Math.max(0, initialVolume * (1 - progress));
+          if (progress < 1) return;
+          if (fadeRef.current !== null) window.clearInterval(fadeRef.current);
+          fadeRef.current = null;
+          audio.pause();
+          audio.volume = .32;
+          setPlaying(false);
+        }, 35);
+        return;
+      }
       if (!audio.paused) audio.volume = action === 'play' ? .07 : .32;
     };
     window.addEventListener('nuestro-universo:final-audio', handleFinalAudio);
     return () => {
       window.removeEventListener('nuestro-universo:final-audio', handleFinalAudio);
+      if (fadeRef.current !== null) window.clearInterval(fadeRef.current);
       audio.pause();
       audioRef.current = null;
     };
@@ -61,12 +79,12 @@ function MusicToggle() {
   return <button type="button" className="music-toggle" onClick={toggle} aria-pressed={playing}><span aria-hidden="true">{playing ? 'Ⅱ' : '♪'}</span>{playing ? 'Pausar música' : 'Activar música'}</button>;
 }
 
-function FinalAudioMessage() {
+function FinalAudioMessage({ onComplete }: { onComplete: () => void }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const announce = (action: 'play' | 'stop') => {
+  const announce = (action: 'play' | 'stop' | 'finale') => {
     window.dispatchEvent(new CustomEvent('nuestro-universo:final-audio', { detail: action }));
   };
 
@@ -118,10 +136,64 @@ function FinalAudioMessage() {
           event.currentTarget.currentTime = 0;
           setProgress(0);
           setPlaying(false);
-          announce('stop');
+          announce('finale');
+          window.setTimeout(onComplete, 320);
         }}
       />
     </section>
+  );
+}
+
+function FinaleReveal({ onClose }: { onClose: () => void }) {
+  const [wishRevealed, setWishRevealed] = useState(false);
+  const herInitial = relationship.girlfriendName.trim().charAt(0) || 'M';
+  const myInitial = relationship.myName.trim().charAt(0) || 'S';
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    const handleKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKey);
+    };
+  }, [onClose]);
+
+  return (
+    <div className={`finale-reveal ${wishRevealed ? 'wish-is-revealed' : ''}`} role="dialog" aria-modal="true" aria-labelledby="finale-title">
+      <button className="finale-close" type="button" onClick={onClose} aria-label="Cerrar momento final" autoFocus>×</button>
+      <div className="finale-sky" aria-hidden="true">
+        {Array.from({ length: 48 }, (_, index) => (
+          <i key={index} style={{
+            left: `${(index * 47 + 9) % 98}%`,
+            top: `${(index * 67 + 6) % 94}%`,
+            width: `${2 + (index % 3)}px`,
+            height: `${2 + (index % 3)}px`,
+            animationDelay: `${(index % 12) * .13}s`,
+          }} />
+        ))}
+      </div>
+      <div className="finale-constellation" aria-hidden="true">
+        <span /><span /><span /><span /><span /><span />
+        <div className="finale-monogram"><b>{herInitial}</b><em>✦</em><b>{myInitial}</b></div>
+      </div>
+      <div className="finale-content">
+        <p className="overline">Nuestra constelación</p>
+        <h2 id="finale-title">De todas las historias posibles,<br /><em>siempre volvería a elegir la nuestra.</em></h2>
+        {!wishRevealed ? (
+          <button className="wish-button" type="button" onClick={() => setWishRevealed(true)}>
+            <span aria-hidden="true">✦</span><small>Pide un deseo…</small>
+          </button>
+        ) : (
+          <div className="wish-message" aria-live="polite">
+            <p className="wish-answer">El mío ya se cumplió cuando llegaste tú.</p>
+            <p>{relationship.girlfriendName}, quiero seguir construyendo mi vida contigo, cumpliendo nuestros sueños, promesas y aventuras, siempre juntitos y de la mano de Dios. Te amo con todo mi corazón.</p>
+            <button type="button" onClick={onClose}>Y esto recién comienza…</button>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -195,7 +267,7 @@ function SecretLetter({ onClose }: { onClose: () => void }) {
   );
 }
 
-function Future({ onBack, onCelebrate }: { onBack: () => void; onCelebrate: (kind: 'always' | 'obviously') => void }) {
+function Future({ onBack, onCelebrate, onFinale }: { onBack: () => void; onCelebrate: (kind: 'always' | 'obviously') => void; onFinale: () => void }) {
   return (
     <section className="future-screen">
       <button type="button" className="back-button" onClick={onBack}>← Volver al mapa</button>
@@ -210,7 +282,7 @@ function Future({ onBack, onCelebrate }: { onBack: () => void; onCelebrate: (kin
         <p className="invitation-plan">{relationship.finalInvitation}</p>
       </div>
       <div className="final-question"><p>¿Quieres seguir explorando el universo conmigo?</p><div><button type="button" onClick={() => onCelebrate('always')}>Sí, siempre</button><button type="button" onClick={() => onCelebrate('obviously')}>Obviamente</button></div></div>
-      <FinalAudioMessage />
+      <FinalAudioMessage onComplete={onFinale} />
     </section>
   );
 }
@@ -236,6 +308,7 @@ export default function UniverseExperience() {
   const [memory, setMemory] = useState<Memory | null>(null);
   const [secretOpen, setSecretOpen] = useState(false);
   const [celebration, setCelebration] = useState<'always' | 'obviously' | null>(null);
+  const [finaleOpen, setFinaleOpen] = useState(false);
   const constellation = useMemo(() => relationship.constellations.find((item) => item.id === view), [view]);
 
   const travelTo = (target: string, scrollToMap = false) => {
@@ -269,12 +342,13 @@ export default function UniverseExperience() {
           <nav className="site-nav" aria-label="Navegación principal"><button className="brand" type="button" onClick={goMap}><span>✦</span>Nuestro Universo</button><div className="nav-actions"><div className="progress-wrap"><span>{visited.size}/5 exploradas</span><i><b style={{ width: `${visited.size * 20}%` }} /></i></div><MusicToggle /></div></nav>
           {view === 'map' && <div className="journey"><Intro /><div id="map"><ConstellationMap constellations={relationship.constellations} visited={visited} onSelect={openConstellation} onSecret={() => setSecretOpen(true)} onFuture={() => travelTo('future')} /></div><footer className="site-footer"><span>✦</span><p>Hecho para {relationship.girlfriendName}<br />por {relationship.myName}</p></footer></div>}
           {constellation && <ConstellationStory constellation={constellation} onBack={goMap} onMemory={setMemory} />}
-          {view === 'future' && <Future onBack={goMap} onCelebrate={setCelebration} />}
+          {view === 'future' && <Future onBack={goMap} onCelebrate={setCelebration} onFinale={() => setFinaleOpen(true)} />}
         </>
       )}
       {memory && <MemoryModal memory={memory} onClose={() => setMemory(null)} />}
       {secretOpen && <SecretLetter onClose={() => setSecretOpen(false)} />}
       {celebration && <Celebration kind={celebration} onClose={() => setCelebration(null)} />}
+      {finaleOpen && <FinaleReveal onClose={() => setFinaleOpen(false)} />}
     </main>
   );
 }
