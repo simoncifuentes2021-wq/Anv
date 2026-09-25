@@ -49,7 +49,7 @@ Formatos recomendados:
 
 ## Música
 
-El botón “Activar atmósfera” genera un paisaje sonoro suave directamente en el navegador y nunca se reproduce antes de que la persona interactúe con la página.
+El botón “Activar música” reproduce `public/musicafondo.mp3` en bucle. El botón final “Escuchar mi mensaje” reproduce `public/audio.ogg`; mientras ese mensaje está sonando, la música de fondo baja automáticamente.
 
 Para enlazar una canción real, completa `spotifyUrl` en el archivo de configuración. También puedes añadir `song` y `spotifyUrl` dentro de una constelación para asociar una canción a ese capítulo.
 
@@ -69,6 +69,18 @@ Para comprobar la versión de producción:
 ```bash
 npm run build
 ```
+
+## Desplegar en Vercel
+
+1. En Vercel, selecciona **Add New → Project**.
+2. Importa el repositorio `simoncifuentes2021-wq/Anv`.
+3. Deja **Framework Preset** en `Next.js`.
+4. No cambies el comando de compilación ni el directorio de salida.
+5. Pulsa **Deploy**.
+
+El proyecto usa Node.js 22, está configurado como Next.js estándar y no necesita variables de entorno.
+
+Los comandos `sites:*` conservan la compatibilidad con la publicación existente en OpenAI Sites.
 
 ## Cómo funciona el progreso
 

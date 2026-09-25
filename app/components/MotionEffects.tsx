@@ -37,12 +37,13 @@ export function MotionEffects({ scene }: { scene: string }) {
         element.classList.add('reveal-ready');
         element.style.setProperty('--reveal-delay', `${Math.min(index % 5, 3) * 90}ms`);
       });
-      observer = new IntersectionObserver((entries) => {
+      const sectionObserver = new IntersectionObserver((entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) { entry.target.classList.add('is-visible'); observer.unobserve(entry.target); }
+          if (entry.isIntersecting) { entry.target.classList.add('is-visible'); sectionObserver.unobserve(entry.target); }
         });
       }, { threshold: .12, rootMargin: '0px 0px -7% 0px' });
-      elements.forEach((element) => observer.observe(element));
+      observer = sectionObserver;
+      elements.forEach((element) => sectionObserver.observe(element));
     }, 40);
     return () => { window.clearTimeout(timer); observer?.disconnect(); };
   }, [scene]);
