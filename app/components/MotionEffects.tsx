@@ -32,7 +32,7 @@ export function MotionEffects({ scene }: { scene: string }) {
   useEffect(() => {
     let observer: IntersectionObserver | undefined;
     const timer = window.setTimeout(() => {
-      const elements = [...document.querySelectorAll<HTMLElement>('.section-heading, .constellation-node, .future-gate, .story-header, .memory-card, .future-capsule, .final-question, .site-footer')];
+      const elements = [...document.querySelectorAll<HTMLElement>('.section-heading, .constellation-node, .future-gate, .story-header, .memory-card, .ludo-secret-trigger, .future-capsule, .final-question, .site-footer')];
       elements.forEach((element, index) => {
         element.classList.add('reveal-ready');
         element.style.setProperty('--reveal-delay', `${Math.min(index % 5, 3) * 90}ms`);

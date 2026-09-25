@@ -226,7 +226,7 @@ function Intro() {
   );
 }
 
-function ConstellationStory({ constellation, onBack, onMemory }: { constellation: Constellation; onBack: () => void; onMemory: (memory: Memory) => void }) {
+function ConstellationStory({ constellation, onBack, onMemory, onLudo }: { constellation: Constellation; onBack: () => void; onMemory: (memory: Memory) => void; onLudo: () => void }) {
   return (
     <section className="story-screen" style={{ '--story-accent': constellation.accent } as React.CSSProperties}>
       <button type="button" className="back-button" onClick={onBack}>← Volver al mapa</button>
@@ -247,9 +247,99 @@ function ConstellationStory({ constellation, onBack, onMemory }: { constellation
           </button>
         ))}
       </div>
+      {constellation.id === 'el-comienzo' && (
+        <button className="ludo-secret-trigger" type="button" onClick={onLudo}>
+          <span className="mini-die" aria-hidden="true"><i /><i /><i /><i /><i /></span>
+          <span><small>Hay un recuerdo escondido</small><strong>La partida que cambió todo</strong><em>Toca para lanzar el dado <b>↗</b></em></span>
+        </button>
+      )}
       {constellation.song && <a className="song-link" href={constellation.spotifyUrl || relationship.spotifyUrl || '#'} target="_blank" rel="noreferrer"><span>♪</span><small>La canción de este capítulo</small><strong>{constellation.song}</strong></a>}
       <button type="button" className="back-button bottom" onClick={onBack}>← Seguir explorando</button>
     </section>
+  );
+}
+
+const DICE_DOTS: Record<number, Array<[number, number]>> = {
+  1: [[2, 2]],
+  2: [[1, 1], [3, 3]],
+  3: [[1, 1], [2, 2], [3, 3]],
+  4: [[1, 1], [1, 3], [3, 1], [3, 3]],
+  5: [[1, 1], [1, 3], [2, 2], [3, 1], [3, 3]],
+  6: [[1, 1], [1, 3], [2, 1], [2, 3], [3, 1], [3, 3]],
+};
+
+function LudoSecret({ onClose }: { onClose: () => void }) {
+  const [phase, setPhase] = useState<'ready' | 'rolling' | 'landed' | 'revealed'>('ready');
+  const [face, setFace] = useState(1);
+  const sequenceTimersRef = useRef<number[]>([]);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    const handleKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKey);
+      sequenceTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    };
+  }, [onClose]);
+
+  const rollDice = () => {
+    if (phase !== 'ready') return;
+    setPhase('rolling');
+    sequenceTimersRef.current = [
+      window.setTimeout(() => {
+      setFace(6);
+        setPhase('landed');
+      }, 2100),
+      window.setTimeout(() => setPhase('revealed'), 4100),
+    ];
+  };
+
+  const hasLanded = phase === 'landed' || phase === 'revealed';
+
+  return (
+    <div className={`ludo-secret phase-${phase} ${hasLanded ? 'has-landed' : ''} ${phase === 'revealed' ? 'is-revealed' : ''}`} role="dialog" aria-modal="true" aria-labelledby="ludo-secret-title">
+      <button className="ludo-close" type="button" onClick={onClose} aria-label="Cerrar recuerdo de Ludo" autoFocus>×</button>
+      <div className="ludo-card">
+        <div className="ludo-visual">
+          <div className="ludo-board" aria-hidden="true"><i /><i /><i /><i /><span className="ludo-path" /></div>
+          <span className="ludo-pawn pawn-one" aria-hidden="true"><i /></span>
+          <span className="ludo-pawn pawn-two" aria-hidden="true"><i /></span>
+          <span className="pawn-meeting" aria-hidden="true">✦</span>
+          <span className="dice-sparks" aria-hidden="true">{Array.from({ length: 12 }, (_, index) => <i key={index} style={{ '--spark': index } as React.CSSProperties} />)}</span>
+          <button className={`ludo-die ${phase === 'rolling' ? 'is-rolling' : ''}`} type="button" onClick={rollDice} disabled={phase !== 'ready'} aria-label="Tirar el dado 3D">
+            <span className="dice-float">
+              <span className={`dice-cube show-${face}`}>
+                {Object.entries(DICE_DOTS).map(([side, dots]) => (
+                  <span className={`dice-face dice-face-${side}`} key={side}>
+                    {dots.map(([row, column], index) => <i key={index} style={{ gridRow: row, gridColumn: column }} />)}
+                  </span>
+                ))}
+              </span>
+            </span>
+            <span className="dice-shadow" aria-hidden="true" />
+          </button>
+        </div>
+        <div className="ludo-copy">
+          <p className="overline">Un recuerdo escondido</p>
+          <h2 id="ludo-secret-title">La partida que<br /><em>cambió todo.</em></h2>
+          {phase !== 'revealed' ? (
+            <div className={`ludo-intro ludo-intro-${phase}`} key={phase} aria-live="polite">
+              <p>{phase === 'ready' ? 'Hay partidas que se olvidan. Pero hubo una que, sin saberlo, comenzó nuestra historia.' : phase === 'rolling' ? 'A veces el destino solo necesita una pequeña casualidad para cambiarlo todo…' : 'El destino cayó en seis. Ahora nuestras fichas vuelven a encontrarse.'}</p>
+              {phase === 'ready' ? <button type="button" onClick={rollDice}>Tirar el dado</button> : <span className="ludo-status"><i />{phase === 'rolling' ? 'El destino está jugando' : 'Dos caminos, un encuentro'}</span>}
+            </div>
+          ) : (
+            <div className="ludo-message" aria-live="polite">
+              <blockquote>“Todo comenzó con una partida de Ludo, sin imaginar que el verdadero premio sería encontrarte a ti.”</blockquote>
+              <p>Entre tantas personas, tantas partidas y tantas posibilidades, la vida hizo que coincidiéramos. Desde ese momento comenzamos a construir nuestra propia historia.</p>
+              <button type="button" onClick={onClose}>Volver al comienzo de nosotros</button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -309,6 +399,7 @@ export default function UniverseExperience() {
   const [secretOpen, setSecretOpen] = useState(false);
   const [celebration, setCelebration] = useState<'always' | 'obviously' | null>(null);
   const [finaleOpen, setFinaleOpen] = useState(false);
+  const [ludoOpen, setLudoOpen] = useState(false);
   const constellation = useMemo(() => relationship.constellations.find((item) => item.id === view), [view]);
 
   const travelTo = (target: string, scrollToMap = false) => {
@@ -341,7 +432,7 @@ export default function UniverseExperience() {
         <>
           <nav className="site-nav" aria-label="Navegación principal"><button className="brand" type="button" onClick={goMap}><span>✦</span>Nuestro Universo</button><div className="nav-actions"><div className="progress-wrap"><span>{visited.size}/5 exploradas</span><i><b style={{ width: `${visited.size * 20}%` }} /></i></div><MusicToggle /></div></nav>
           {view === 'map' && <div className="journey"><Intro /><div id="map"><ConstellationMap constellations={relationship.constellations} visited={visited} onSelect={openConstellation} onSecret={() => setSecretOpen(true)} onFuture={() => travelTo('future')} /></div><footer className="site-footer"><span>✦</span><p>Hecho para {relationship.girlfriendName}<br />por {relationship.myName}</p></footer></div>}
-          {constellation && <ConstellationStory constellation={constellation} onBack={goMap} onMemory={setMemory} />}
+          {constellation && <ConstellationStory constellation={constellation} onBack={goMap} onMemory={setMemory} onLudo={() => setLudoOpen(true)} />}
           {view === 'future' && <Future onBack={goMap} onCelebrate={setCelebration} onFinale={() => setFinaleOpen(true)} />}
         </>
       )}
@@ -349,6 +440,7 @@ export default function UniverseExperience() {
       {secretOpen && <SecretLetter onClose={() => setSecretOpen(false)} />}
       {celebration && <Celebration kind={celebration} onClose={() => setCelebration(null)} />}
       {finaleOpen && <FinaleReveal onClose={() => setFinaleOpen(false)} />}
+      {ludoOpen && <LudoSecret onClose={() => setLudoOpen(false)} />}
     </main>
   );
 }
