@@ -29,8 +29,8 @@ export type Constellation = {
 };
 
 export const relationship = {
-  girlfriendName: 'mi Monsita',
-  myName: '[MI_NOMBRE]',
+  girlfriendName: 'Monserrat Antonia',
+  myName: 'Simón Cifuentes',
   startDate: RELATIONSHIP_START_DATE,
   anniversaryNumber: 5,
   mainPhrase: 'Hace cinco años comenzó nuestro universo.',
@@ -40,7 +40,17 @@ export const relationship = {
   finalPlace: '[LUGAR DE LA SORPRESA]',
   finalInvitation: 'Quiero que sigamos cumpliendo cada sueño, cada plan y cada promesa juntos, siempre de la mano y con la ayuda de Dios.',
   introText: 'Desde aquel día, cada momento contigo se convirtió en parte de mi lugar favorito.',
-  secretLetter: `Mi Monsita, quiero que sepas que eres una mujer única, alguien que no se compara con nadie. Eres mi princesita, mi bb y una de las personas más importantes de mi vida. Te amo y te adoro con todo mi corazón, no por una versión perfecta de ti, sino por la mujer real y maravillosa que eres. Gracias por estar en mi vida, por compartir tu alegría conmigo y por permitirme amarte cada día un poquito más.`,
+  secretLetter: `Mi querida Monserrat Antonia:
+
+Esta cartita es para ti. ¡Felices cinco años de novios! Aunque han sido mucho más que eso: han sido años de conocernos, hablar, jugar, aprender y descubrirnos tal como somos. Te amo con mi vida, con todo mi ser y con todo mi corazón. Eres la mujer con quien quiero compartir mi vida y cada parte de ella, mi Monserrat Antonia.
+
+Aún recuerdo cómo comenzó todo. Nadie imaginó que aquello terminaría convirtiéndose en lo que tenemos ahora; ni tú ni yo sabíamos que llegaríamos tan lejos. Pero míranos: aquí estamos, después de cinco años y con la ayuda de Dios. Hemos crecido, no solamente en edad y poniéndonos más viejitos, sino haciendo crecer esta relación bonita y sana que hoy tenemos. Podemos reírnos, podemos enojarnos, pero siempre estamos ahí. Mi enojona mía, cómo te adoro.
+
+El tiempo pasó sin que nos diéramos cuenta. Gracias, mi Monsita, por todos los momentos lindos y también por esos momentos simples que disfrutamos porque podemos estar los dos. Me encanta divertirnos juntos y ver tu sonrisa maravillosa, esa sonrisa única que tanto amo. Lo que más me gusta es verte feliz, aunque sea por cosas sencillas. Pero ya iremos por cosas no tan sencillas, ¿eh? Vamos por Nueva York, jejeje; esa te la debo, mi amor. Y si Dios lo permite, conoceremos juntos lugares que todavía ni imaginamos.
+
+Gracias por soportarme… y, OBVIO, yo por soportarla a usted, jajajaja. Bromita, mi bb. Yo la amo tal como es y así seguirá siendo; nunca lo olvide. Ya pronto comenzaremos desde cero, pero en otra etapa, y eso es exactamente lo que quiero vivir contigo.
+
+Te mando besos, abrazos y todo mi amorcito para ute. Vamos por toda una vida juntitos: por más salidas a comer, por más aventuras, por más tardes de pesca —que ya vamos a sacar más pescaditos— y por verte sacar tu primer pez. Te amo, mi amor. ¡Felices cinco años de novios!`,
   futureLetter: `Cuando pienso en todo lo que viene, no imagino planes donde tú no estés. Quiero cumplir contigo cada sueño que tengamos, honrar nuestras promesas y construir paso a paso la vida que imaginamos: una familia, estabilidad, aventuras, atardeceres y muchos logros celebrados juntos. Con la ayuda de Dios, quiero que sigamos siendo el apoyo del otro en cada nueva etapa.`,
   promise: 'Prometo seguir eligiéndote, hacerte parte de cada gran plan de mi vida y trabajar contigo para convertir nuestros sueños en recuerdos reales.',
   constellations: [

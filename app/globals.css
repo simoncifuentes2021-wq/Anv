@@ -177,7 +177,7 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--gold); outline-
 .secret-letter .overline { color: #8a6570; }
 .letter-star { display: block; margin-bottom: 24px; color: #8a6570; }
 .secret-letter h2 { margin: 18px 0 30px; font-family: Georgia,"Times New Roman",serif; font-size: clamp(2rem,5vw,3.5rem); font-weight: 400; line-height: 1; letter-spacing: -.04em; }
-.secret-letter > p:last-of-type { font-family: Georgia,"Times New Roman",serif; font-size: 1.04rem; line-height: 1.9; }
+.secret-letter > p:last-of-type { white-space: pre-line; font-family: Georgia,"Times New Roman",serif; font-size: 1.04rem; line-height: 1.9; }
 .secret-letter footer { margin-top: 36px; font-family: Georgia,"Times New Roman",serif; font-style: italic; line-height: 1.7; }.secret-letter footer strong{font-weight:400;font-size:1.2rem}
 
 .future-screen { max-width: 900px; text-align: center; }
