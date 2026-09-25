@@ -20,38 +20,79 @@ function mainPhrase() {
 
 function MusicToggle() {
   const [playing, setPlaying] = useState(false);
-  const audioRef = useRef<{ context: AudioContext; gain: GainNode; oscillators: OscillatorNode[] } | null>(null);
+  const audioRef = useRef<{ context: AudioContext; gain: GainNode; oscillators: OscillatorNode[]; lfo: OscillatorNode } | null>(null);
 
-  const toggle = () => {
-    if (playing && audioRef.current) {
-      audioRef.current.gain.gain.setTargetAtTime(0, audioRef.current.context.currentTime, .25);
-      window.setTimeout(() => audioRef.current?.context.close(), 700);
+  const toggle = async () => {
+    if (audioRef.current) {
+      const activeAudio = audioRef.current;
+      const now = activeAudio.context.currentTime;
+      activeAudio.gain.gain.cancelScheduledValues(now);
+      activeAudio.gain.gain.setValueAtTime(Math.max(activeAudio.gain.gain.value, .0001), now);
+      activeAudio.gain.gain.exponentialRampToValueAtTime(.0001, now + .75);
       audioRef.current = null;
       setPlaying(false);
+      window.setTimeout(() => { void activeAudio.context.close(); }, 850);
       return;
     }
     const AudioCtor = window.AudioContext || (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     if (!AudioCtor) return;
     const context = new AudioCtor();
-    const gain = context.createGain();
-    gain.gain.setValueAtTime(0, context.currentTime);
-    gain.gain.linearRampToValueAtTime(.035, context.currentTime + 1.2);
-    gain.connect(context.destination);
-    const oscillators = [110, 164.81, 220].map((frequency, index) => {
-      const oscillator = context.createOscillator();
-      const noteGain = context.createGain();
-      oscillator.type = index === 1 ? 'sine' : 'triangle';
-      oscillator.frequency.value = frequency;
-      noteGain.gain.value = index === 0 ? .5 : .18;
-      oscillator.connect(noteGain).connect(gain);
-      oscillator.start();
-      return oscillator;
-    });
-    audioRef.current = { context, gain, oscillators };
-    setPlaying(true);
+    try {
+      if (context.state === 'suspended') await context.resume();
+
+      const now = context.currentTime;
+      const gain = context.createGain();
+      const filter = context.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(900, now);
+      filter.Q.setValueAtTime(.7, now);
+      gain.gain.setValueAtTime(.0001, now);
+      gain.gain.exponentialRampToValueAtTime(.12, now + 1.5);
+      gain.connect(filter).connect(context.destination);
+
+      const noteVolumes = [.42, .2, .13, .09];
+      const oscillators = [130.81, 196, 261.63, 329.63].map((frequency, index) => {
+        const oscillator = context.createOscillator();
+        const noteGain = context.createGain();
+        oscillator.type = index === 0 ? 'triangle' : 'sine';
+        oscillator.frequency.setValueAtTime(frequency, now);
+        oscillator.detune.setValueAtTime(index % 2 === 0 ? -3 : 3, now);
+        noteGain.gain.setValueAtTime(noteVolumes[index], now);
+        oscillator.connect(noteGain).connect(gain);
+        oscillator.start(now);
+        return oscillator;
+      });
+
+      const lfo = context.createOscillator();
+      const lfoDepth = context.createGain();
+      lfo.frequency.setValueAtTime(.08, now);
+      lfoDepth.gain.setValueAtTime(150, now);
+      lfo.connect(lfoDepth).connect(filter.frequency);
+      lfo.start(now);
+
+      [523.25, 659.25, 783.99].forEach((frequency, index) => {
+        const chime = context.createOscillator();
+        const chimeGain = context.createGain();
+        const startsAt = now + index * .16;
+        chime.type = 'sine';
+        chime.frequency.setValueAtTime(frequency, startsAt);
+        chimeGain.gain.setValueAtTime(.0001, startsAt);
+        chimeGain.gain.exponentialRampToValueAtTime(.1, startsAt + .035);
+        chimeGain.gain.exponentialRampToValueAtTime(.0001, startsAt + 1.65);
+        chime.connect(chimeGain).connect(filter);
+        chime.start(startsAt);
+        chime.stop(startsAt + 1.7);
+      });
+
+      audioRef.current = { context, gain, oscillators, lfo };
+      setPlaying(true);
+    } catch {
+      void context.close();
+      setPlaying(false);
+    }
   };
 
-  useEffect(() => () => { audioRef.current?.context.close(); }, []);
+  useEffect(() => () => { void audioRef.current?.context.close(); }, []);
   return <button type="button" className="music-toggle" onClick={toggle} aria-pressed={playing}><span aria-hidden="true">{playing ? 'Ⅱ' : '♪'}</span>{playing ? 'Silenciar atmósfera' : 'Activar atmósfera'}</button>;
 }
 
